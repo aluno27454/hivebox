@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme {
+  --color-honey: #F5A623;
+  --color-honey-dark: #D4891A;
+  --color-honey-light: #FDE8B5;
+  --color-dark: #1A1A0E;
+  --color-charcoal: #2D2D1A;
+  --color-mid: #6B6B4A;
+  --color-light: #F9F6EE;
+  --color-forest: #2E5E2E;
+  --color-forest-light: #E8F5E8;
+  --color-danger: #C0392B;
+  --color-safe: #27AE60;
+  --color-warn: #F39C12;
+
+  --font-display: var(--font-playfair), 'Playfair Display', serif;
+  --font-body: var(--font-dm-sans), 'DM Sans', sans-serif;
+  --font-code: var(--font-jetbrains), 'JetBrains Mono', monospace;
+
+  --shadow-honey: 0 8px 32px rgba(245, 166, 35, 0.25);
+  --shadow-card: 0 4px 16px rgba(26, 26, 14, 0.12);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--color-light);
+    color: var(--color-dark);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    color: var(--color-charcoal);
+    line-height: 1.2;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .hex-bg {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='52' viewBox='0 0 60 52'%3E%3Cpolygon points='30,2 58,17 58,47 30,62 2,47 2,17' fill='none' stroke='%23F5A623' stroke-width='1'/%3E%3C/svg%3E");
+    background-size: 60px 52px;
+  }
+
+  .text-gradient-honey {
+    background: linear-gradient(135deg, #F5A623 0%, #D4891A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .skip-nav {
+    position: absolute;
+    top: -100%;
+    left: 0;
+    padding: 8px 16px;
+    background: #F5A623;
+    color: #1A1A0E;
+    font-weight: 600;
+    z-index: 9999;
+    transition: top 0.2s;
+  }
+
+  .skip-nav:focus {
+    top: 0;
+  }
+
+  .animate-pulse-honey {
+    animation: pulseHoney 2s ease-in-out infinite;
+  }
+
+  @keyframes pulseHoney {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0); }
+    50% { box-shadow: 0 0 20px 4px rgba(245, 166, 35, 0.4); }
+  }
+
+  .nav-link-underline {
+    position: relative;
+  }
+
+  .nav-link-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #F5A623;
+    transition: width 0.3s ease;
+  }
+
+  .nav-link-underline:hover::after,
+  .nav-link-underline.active::after {
+    width: 100%;
+  }
+}

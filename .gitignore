@@ -1,0 +1,10 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+
+# Next.js
+website/.next/
+website/node_modules/
+website/.env*.local
