@@ -128,6 +128,13 @@ function ValuesSection() {
   );
 }
 
+const TEAM_PHOTOS: Record<string, string> = {
+  'André Vassalo':  '/equipa/andre.jpg',
+  'Samuel Ponte':   '/equipa/samuel.jpg',
+  'José Lopes':     '/equipa/jose.jpg',
+  'Gabriel Puga':   '/equipa/gabriel.jpg',
+};
+
 function TeamSection() {
   return (
     <section className="py-24 bg-white">
@@ -142,12 +149,15 @@ function TeamSection() {
             <div key={member.name} className="bg-light rounded-2xl overflow-hidden border border-honey-light hover:-translate-y-1 transition-all" style={{ boxShadow: 'var(--shadow-card)' }}>
               {/* Avatar */}
               <div className="h-40 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${member.roleColor}20, ${member.roleColor}40)` }}>
-                <div
-                  className="w-24 h-24 rounded-full flex items-center justify-center text-white font-display font-bold text-4xl"
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={TEAM_PHOTOS[member.name]}
+                  alt={member.name}
+                  width={96}
+                  height={96}
+                  className="w-24 h-24 rounded-full object-cover object-center"
                   style={{ backgroundColor: member.roleColor }}
-                >
-                  {member.initial}
-                </div>
+                />
               </div>
 
               <div className="p-6">
