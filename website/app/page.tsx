@@ -445,15 +445,19 @@ function AudienceSection() {
 }
 
 function TeamTeaser() {
-  const initials = ['A','S','J','G'];
-  const colors = ['#F5A623','#2E5E2E','#2D2D1A','#C0392B'];
+  const team = [
+    { name: 'André Vassalo',  photo: '/equipa/andre.jpg',   color: '#F5A623' },
+    { name: 'Samuel Ponte',   photo: '/equipa/samuel.jpg',  color: '#2E5E2E' },
+    { name: 'José Lopes',     photo: '/equipa/jose.jpg',    color: '#2D2D1A' },
+    { name: 'Gabriel Puga',   photo: '/equipa/gabriel.jpg', color: '#C0392B' },
+  ];
   return (
     <section className="py-24 bg-white">
       <div className="max-w-[900px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="flex justify-center gap-4 mb-8">
-          {initials.map((initial, i) => (
-            <div key={initial} className="w-16 h-16 rounded-full flex items-center justify-center text-white font-display font-bold text-xl flex-shrink-0" style={{ backgroundColor: colors[i] }}>
-              {initial}
+          {team.map(m => (
+            <div key={m.name} className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0" style={{ backgroundColor: m.color }}>
+              <Image src={m.photo} alt={m.name} width={64} height={64} className="w-full h-full object-cover object-center" />
             </div>
           ))}
         </div>
