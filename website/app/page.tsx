@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Shield, Smartphone, Sun, Puzzle, ChevronRight, CheckCircle } from 'lucide-react';
 import StatsCounter from '@/components/ui/StatsCounter';
@@ -85,7 +86,7 @@ function HeroSection() {
 
 function ProblemSection() {
   const cards = [
-    { icon: '🐝', title: 'Vespa Asiática', text: 'A Vespa velutina destrói colmeias inteiras em horas. Em Portugal, está a devastar apiários de norte a sul sem aviso.', color: 'text-danger' },
+    { icon: null, title: 'Vespa Asiática', text: 'A Vespa velutina destrói colmeias inteiras em horas. Em Portugal, está a devastar apiários de norte a sul sem aviso.', color: 'text-danger' },
     { icon: '⏰', title: 'Visitas Constantes', text: 'Os apicultores deslocam-se ao apiário sem saber se há problemas. Cada viagem perdida custa tempo e dinheiro.', color: 'text-warn' },
     { icon: '💰', title: 'Tecnologia Inacessível', text: 'As soluções existentes custam mais de 1.000 € e não protegem contra a vespa asiática. Foram feitas para grandes produtores.', color: 'text-mid' },
   ];
@@ -100,7 +101,12 @@ function ProblemSection() {
         <div className="grid md:grid-cols-3 gap-6">
           {cards.map(card => (
             <div key={card.title} className="bg-white rounded-2xl p-8 border border-honey-light hover:-translate-y-1 transition-all duration-300" style={{ boxShadow: 'var(--shadow-card)' }}>
-              <div className="text-4xl mb-4" role="img" aria-label={card.title}>{card.icon}</div>
+              <div className="mb-4 h-16 flex items-center justify-center" role="img" aria-label={card.title}>
+                {card.icon === null
+                  ? <Image src="/vespa-velutina.svg" alt="Vespa velutina" width={64} height={64} />
+                  : <span className="text-4xl">{card.icon}</span>
+                }
+              </div>
               <h3 className={`font-display text-xl mb-3 ${card.color}`}>{card.title}</h3>
               <p className="text-mid text-sm leading-relaxed">{card.text}</p>
             </div>
@@ -166,9 +172,9 @@ function SolutionSection() {
 
 function HowItWorksSection() {
   const steps = [
-    { num: '1', title: 'Instala em 60 minutos', text: 'Kit completo com guia ilustrado. Dois parafusos, ligar os cabos, leitura do QR Code na app. Pronto.' },
-    { num: '2', title: 'A Hive Box fica de guarda', text: 'Sensores leem temperatura, humidade, peso e CO₂ 24 horas por dia. A câmara deteta vespas e as arpas ativam automaticamente.' },
-    { num: '3', title: 'Tu recebes os alertas', text: 'Notificações push em tempo real. Gráficos históricos. Relatórios PDF. Visita o apiário só quando é necessário.' },
+    { num: '1', title: 'Instala em 60 minutos', text: 'Kit completo com guia ilustrado e dois parafusos. Liga os cabos, lê o QR Code na app e está pronto a funcionar.' },
+    { num: '2', title: 'A Hive Box fica de guarda', text: 'Sensores leem temperatura, peso e CO₂ 24 horas por dia. A câmara deteta vespas asiáticas e as arpas ativam automaticamente.' },
+    { num: '3', title: 'Tu recebes os alertas', text: 'Notificações push em tempo real com gráficos e relatórios PDF. Visita o apiário só quando é mesmo necessário.' },
   ];
 
   return (
@@ -290,43 +296,99 @@ function AppSection() {
     <section className="py-24 bg-white">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Phone mockup */}
+          {/* Phone mockup — mirrors the real app UI */}
           <div className="flex justify-center order-last lg:order-first">
-            <div className="w-64 h-[520px] rounded-[2.5rem] bg-dark border-4 border-charcoal flex flex-col overflow-hidden shadow-2xl">
-              <div className="bg-dark px-6 pt-4 pb-2 flex justify-between text-white/40 text-xs">
+            <div className="w-64 rounded-[2.5rem] border-4 border-charcoal flex flex-col overflow-hidden shadow-2xl" style={{ backgroundColor: '#1A1A0E' }}>
+              {/* Status bar */}
+              <div className="px-6 pt-4 pb-2 flex justify-between text-white/40 text-xs" style={{ backgroundColor: '#1A1A0E' }}>
                 <span>9:41</span><span>●●●</span>
               </div>
-              <div className="bg-charcoal px-4 py-3 flex items-center gap-2">
-                <div className="text-honey font-bold text-sm">Hive Box</div>
-                <div className="ml-auto flex gap-1">
-                  {['bg-safe','bg-safe','bg-warn'].map((c,i) => <div key={i} className={`w-2 h-2 rounded-full ${c}`} />)}
-                </div>
+              {/* App header — matches headerStyle */}
+              <div className="px-4 py-3" style={{ backgroundColor: '#1A1A0E' }}>
+                <span className="font-bold text-sm" style={{ color: '#F5A623' }}>Dashboard</span>
               </div>
-              <div className="flex-1 bg-dark/90 p-3 space-y-2">
-                {[
-                  { name: 'Colmeia 1', status: 'bg-safe', temp: '35.2°C', peso: '28.4kg' },
-                  { name: 'Colmeia 2', status: 'bg-safe', temp: '34.8°C', peso: '31.1kg' },
-                  { name: 'Colmeia 3', status: 'bg-warn', temp: '38.1°C', peso: '22.0kg' },
-                ].map(h => (
-                  <div key={h.name} className="bg-charcoal rounded-xl p-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-white text-xs font-semibold">{h.name}</span>
-                      <span className={`w-2 h-2 rounded-full ${h.status}`} />
+              {/* Screen content — light bg */}
+              <div className="p-2.5 space-y-1.5" style={{ backgroundColor: '#F9F6EE' }}>
+                {/* Greeting */}
+                <div className="mb-1">
+                  <p className="text-[10px] font-extrabold" style={{ color: '#2D2D1A' }}>Bom dia, Apicultor 🐝</p>
+                  <p className="text-[8px]" style={{ color: '#6B6B4A' }}>Aqui está o estado do teu apiário</p>
+                </div>
+                {/* Stats row */}
+                <div className="grid grid-cols-4 gap-1 mb-1">
+                  {[
+                    { label: 'Total',      value: '4', color: '#2D2D1A' },
+                    { label: 'Saudáveis', value: '2', color: '#27AE60' },
+                    { label: 'Atenção',   value: '1', color: '#F39C12' },
+                    { label: 'Perigo',    value: '1', color: '#C0392B' },
+                  ].map(s => (
+                    <div key={s.label} className="rounded-xl p-1.5 text-center" style={{ backgroundColor: '#FFFFFF' }}>
+                      <p className="text-xs font-extrabold leading-none" style={{ color: s.color }}>{s.value}</p>
+                      <p className="text-[6px] mt-0.5 font-semibold leading-none" style={{ color: '#6B6B4A' }}>{s.label}</p>
                     </div>
-                    <div className="text-white/50 text-xs font-code">🌡 {h.temp} · ⚖ {h.peso}</div>
+                  ))}
+                </div>
+                <p className="text-[9px] font-bold mb-0.5" style={{ color: '#2D2D1A' }}>Colmeias</p>
+                {/* Hive card — Apiário do Olival (healthy) */}
+                <div className="rounded-xl p-2 border-l-[3px]" style={{ backgroundColor: '#FFFFFF', borderLeftColor: '#27AE60' }}>
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="flex items-center gap-1 flex-1 min-w-0">
+                      <span className="text-[8px] font-bold truncate" style={{ color: '#2D2D1A' }}>Apiário do Olival</span>
+                      <span className="text-[6px] px-1 rounded shrink-0 font-bold" style={{ backgroundColor: '#FDE8B5', color: '#D4891A' }}>PRO</span>
+                    </div>
+                    <span className="text-[6px] px-1.5 py-0.5 rounded-full border shrink-0" style={{ color: '#27AE60', borderColor: '#27AE60', backgroundColor: '#27AE6015' }}>● Saudável</span>
                   </div>
-                ))}
-                <div className="bg-charcoal rounded-xl p-3">
-                  <p className="text-honey text-xs font-semibold mb-2">📈 Peso semanal</p>
-                  <div className="flex items-end gap-1 h-10">
-                    {[60,72,68,80,76,85,90].map((h,i) => (
-                      <div key={i} className="flex-1 bg-honey/60 rounded-sm" style={{ height: `${h}%` }} />
+                  <div className="flex flex-wrap gap-0.5 mb-1">
+                    {['🌡 35.2°C','⚖ 28.4kg','🔋 92%'].map(s => (
+                      <span key={s} className="text-[6px] px-1 py-0.5 rounded font-semibold" style={{ backgroundColor: '#F9F6EE', color: '#2D2D1A' }}>{s}</span>
                     ))}
                   </div>
+                  <p className="text-[6px]" style={{ color: '#6B6B4A' }}>Olival do Outeiro, Tomar</p>
+                </div>
+                {/* Hive card — Quinta da Serração (healthy) */}
+                <div className="rounded-xl p-2 border-l-[3px]" style={{ backgroundColor: '#FFFFFF', borderLeftColor: '#27AE60' }}>
+                  <div className="flex items-start justify-between mb-1">
+                    <span className="text-[8px] font-bold" style={{ color: '#2D2D1A' }}>Quinta da Serração</span>
+                    <span className="text-[6px] px-1.5 py-0.5 rounded-full border shrink-0" style={{ color: '#27AE60', borderColor: '#27AE60', backgroundColor: '#27AE6015' }}>● Saudável</span>
+                  </div>
+                  <div className="flex flex-wrap gap-0.5 mb-1">
+                    {['🌡 34.8°C','⚖ 31.1kg','🔋 78%'].map(s => (
+                      <span key={s} className="text-[6px] px-1 py-0.5 rounded font-semibold" style={{ backgroundColor: '#F9F6EE', color: '#2D2D1A' }}>{s}</span>
+                    ))}
+                  </div>
+                  <p className="text-[6px]" style={{ color: '#6B6B4A' }}>Serra, Tomar</p>
+                </div>
+                {/* Hive card — Herdade dos Pinheiros (danger) */}
+                <div className="rounded-xl p-2 border-l-[3px]" style={{ backgroundColor: '#FFFFFF', borderLeftColor: '#C0392B' }}>
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="flex items-center gap-1 flex-1 min-w-0">
+                      <span className="text-[8px] font-bold truncate" style={{ color: '#2D2D1A' }}>Herdade dos Pinheiros</span>
+                      <span className="text-[6px] px-1 rounded shrink-0 font-bold" style={{ backgroundColor: '#FDE8B5', color: '#D4891A' }}>PRO</span>
+                    </div>
+                    <span className="text-[6px] px-1.5 py-0.5 rounded-full border shrink-0" style={{ color: '#C0392B', borderColor: '#C0392B', backgroundColor: '#C0392B15' }}>● Perigo</span>
+                  </div>
+                  <div className="flex flex-wrap gap-0.5 mb-1">
+                    {['🌡 38.1°C','⚖ 22.0kg','🔋 45%'].map(s => (
+                      <span key={s} className="text-[6px] px-1 py-0.5 rounded font-semibold" style={{ backgroundColor: '#F9F6EE', color: '#2D2D1A' }}>{s}</span>
+                    ))}
+                    <span className="text-[6px] px-1 py-0.5 rounded font-semibold" style={{ backgroundColor: '#FDECEA', color: '#C0392B' }}>🚨 Vespa!</span>
+                  </div>
+                  <p className="text-[6px]" style={{ color: '#6B6B4A' }}>Pinheiros, Tomar</p>
                 </div>
               </div>
-              <div className="bg-charcoal px-4 py-3 flex justify-around text-white/50 text-sm">
-                <span>🏠</span><span>📊</span><span>🗺️</span><span>⚙️</span>
+              {/* Tab bar — matches actual app (white bg, honey active) */}
+              <div className="px-2 py-2 flex justify-around border-t" style={{ backgroundColor: '#FFFFFF', borderTopColor: '#E8DFC8' }}>
+                {[
+                  { icon: '▦', label: 'Dashboard', active: true  },
+                  { icon: '🗺', label: 'Mapa',      active: false },
+                  { icon: '📊', label: 'Gráficos',  active: false },
+                  { icon: '🔔', label: 'Alertas',   active: false },
+                ].map(t => (
+                  <div key={t.label} className="flex flex-col items-center gap-0.5">
+                    <span className="text-xs leading-none">{t.icon}</span>
+                    <span className="text-[6px] font-semibold" style={{ color: t.active ? '#F5A623' : '#6B6B4A' }}>{t.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
