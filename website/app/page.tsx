@@ -456,9 +456,11 @@ function TeamTeaser() {
       <div className="max-w-[900px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="flex justify-center gap-4 mb-8">
           {team.map(m => (
-            <div key={m.name} className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0" style={{ backgroundColor: m.color }}>
-              <Image src={m.photo} alt={m.name} width={64} height={64} className="w-full h-full object-cover object-center" />
-            </div>
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={m.name} src={m.photo} alt={m.name} width={64} height={64}
+              className="w-16 h-16 rounded-full flex-shrink-0 object-cover object-center"
+              style={{ backgroundColor: m.color }}
+            />
           ))}
         </div>
         <p className="text-honey font-semibold text-sm uppercase tracking-wider mb-3">A Nossa Equipa</p>
