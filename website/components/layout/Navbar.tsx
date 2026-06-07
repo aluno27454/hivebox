@@ -31,7 +31,7 @@ export default function Navbar() {
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled || menuOpen
           ? 'bg-white/95 backdrop-blur-md shadow-sm'
-          : 'bg-dark/80 backdrop-blur-sm lg:bg-transparent'
+          : 'bg-dark/80 backdrop-blur-sm'
       }`}
       style={{ transitionProperty: 'background, box-shadow, backdrop-filter' }}
     >
