@@ -103,7 +103,8 @@ function ProblemSection() {
             <div key={card.title} className="bg-white rounded-2xl p-8 border border-honey-light hover:-translate-y-1 transition-all duration-300" style={{ boxShadow: 'var(--shadow-card)' }}>
               <div className="mb-4 h-16 flex items-center justify-center" role="img" aria-label={card.title}>
                 {card.icon === null
-                  ? <Image src="/vespa-velutina.svg" alt="Vespa velutina" width={64} height={64} />
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src="/vespa-velutina.svg" alt="Vespa velutina" width={64} height={64} />
                   : <span className="text-4xl">{card.icon}</span>
                 }
               </div>
