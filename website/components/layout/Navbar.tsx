@@ -27,6 +27,7 @@ export default function Navbar() {
   }, [menuOpen]);
 
   return (
+    <>
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled || menuOpen
@@ -83,41 +84,44 @@ export default function Navbar() {
         </button>
       </nav>
 
-      {/* Mobile drawer */}
-      {menuOpen && (
-        <div className="lg:hidden fixed inset-0 top-16 bg-white z-40 flex flex-col px-6 pt-8 pb-16" role="dialog" aria-modal="true" aria-label="Menu de navegação">
-          <ul className="flex flex-col gap-2" role="list">
-            {NAV_LINKS.map(({ label, href }) => {
-              const active = pathname === href;
-              return (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    className={`block py-4 text-xl font-display font-semibold border-b border-honey-light transition-colors ${
-                      active ? 'text-honey' : 'text-charcoal hover:text-honey'
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="mt-8">
-            <Link
-              href="/contacto"
-              className="block w-full text-center py-4 rounded-full bg-honey text-dark font-semibold text-lg hover:bg-honey-dark transition-colors"
-            >
-              Encomendar
-            </Link>
-          </div>
-          <div className="mt-auto text-mid text-sm text-center">
-            <p>geral@hivebox.pt</p>
-            <p>+351 919 458 298</p>
-          </div>
-        </div>
-      )}
     </header>
+
+    {/* Mobile drawer — rendered outside <header> so backdrop-filter
+        on the header doesn't trap fixed positioning to the header bounds */}
+    {menuOpen && (
+      <div className="lg:hidden fixed inset-0 top-16 bg-white z-40 flex flex-col px-6 pt-8 pb-16" role="dialog" aria-modal="true" aria-label="Menu de navegação">
+        <ul className="flex flex-col gap-2" role="list">
+          {NAV_LINKS.map(({ label, href }) => {
+            const active = pathname === href;
+            return (
+              <li key={href}>
+                <Link
+                  href={href}
+                  className={`block py-4 text-xl font-display font-semibold border-b border-honey-light transition-colors ${
+                    active ? 'text-honey' : 'text-charcoal hover:text-honey'
+                  }`}
+                >
+                  {label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="mt-8">
+          <Link
+            href="/contacto"
+            className="block w-full text-center py-4 rounded-full bg-honey text-dark font-semibold text-lg hover:bg-honey-dark transition-colors"
+          >
+            Encomendar
+          </Link>
+        </div>
+        <div className="mt-auto text-mid text-sm text-center">
+          <p>geral@hivebox.pt</p>
+          <p>+351 919 458 298</p>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
