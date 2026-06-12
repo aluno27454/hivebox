@@ -56,7 +56,6 @@ export default function HiveDetailScreen() {
     );
   }
 
-  // Antes: erro deixava o spinner infinito. Agora mostra erro com retry.
   if (error || !hive) {
     return (
       <ErrorView
@@ -81,18 +80,21 @@ export default function HiveDetailScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.honey} />
       }
     >
-      {/* Header card */}
-      <View style={[styles.headerCard, { borderTopColor: statusColor }]}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.name}>{hive.name}</Text>
-            <Text style={styles.location}>📍 {hive.location.label}</Text>
+      {/* Header card com faixa tonal do estado */}
+      <View style={styles.headerCard}>
+        <View style={[styles.headerTint, { backgroundColor: statusColor }]} />
+        <View style={styles.headerInner}>
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.name}>{hive.name}</Text>
+              <Text style={styles.location}>📍 {hive.location.label}</Text>
+            </View>
+            <StatusBadge status={hive.status} />
           </View>
-          <StatusBadge status={hive.status} />
-        </View>
-        <View style={styles.metaRow}>
-          <MetaChip label={`Modelo: ${hive.model.toUpperCase()}`} />
-          <MetaChip label={`Última actualização: ${formatTime(hive.lastUpdate)}`} />
+          <View style={styles.metaRow}>
+            <MetaChip label={`Modelo ${hive.model.toUpperCase()}`} highlight={hive.model === 'pro'} />
+            <MetaChip label={`Actualizado às ${formatTime(hive.lastUpdate)}`} />
+          </View>
         </View>
       </View>
 
@@ -115,7 +117,13 @@ export default function HiveDetailScreen() {
       {/* Sensors */}
       {!isOffline && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Sensores em tempo real</Text>
+          <View style={styles.cardTitleRow}>
+            <Text style={styles.cardTitle}>Sensores</Text>
+            <View style={styles.liveTag}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>EM TEMPO REAL</Text>
+            </View>
+          </View>
           <SensorRow icon="🌡" label="Temperatura interior" value={`${s.tempInterior.toFixed(1)}°C`} alert={s.tempInterior > 37} />
           <SensorRow icon="🌤" label="Temperatura exterior" value={`${s.tempExterior.toFixed(1)}°C`} />
           <SensorRow icon="💧" label="Humidade relativa" value={`${s.humidity}%`} />
@@ -132,20 +140,23 @@ export default function HiveDetailScreen() {
       {history && (
         <>
           <ChartSection
-            title="Temperatura — últimos 7 dias (°C)"
+            title="Temperatura"
+            subtitle="Últimos 7 dias · °C"
             data={history.temperature}
             color={Colors.danger}
             width={width - 64}
           />
           <ChartSection
-            title="Peso — últimos 7 dias (kg)"
+            title="Peso"
+            subtitle="Últimos 7 dias · kg"
             data={history.weight}
             color={Colors.forest}
             width={width - 64}
           />
           {history.co2.length > 0 && (
             <ChartSection
-              title="CO₂ — últimos 7 dias (ppm)"
+              title="CO₂"
+              subtitle="Últimos 7 dias · ppm"
               data={history.co2}
               color={Colors.honey}
               width={width - 64}
@@ -155,15 +166,17 @@ export default function HiveDetailScreen() {
       )}
 
       {/* Actions */}
-      <View style={styles.actionsSection}>
+      <View style={styles.card}>
         <Text style={styles.cardTitle}>Acções</Text>
         <TouchableOpacity
+          activeOpacity={0.85}
           style={styles.actionBtn}
           onPress={() => Alert.alert('Intervenção registada', 'Visita anotada com sucesso.')}
         >
           <Text style={styles.actionText}>📝 Registar visita</Text>
         </TouchableOpacity>
         <TouchableOpacity
+          activeOpacity={0.85}
           style={[styles.actionBtn, styles.actionBtnSecondary]}
           onPress={() => Alert.alert('Relatório', 'O relatório PDF está a ser gerado.')}
         >
@@ -174,20 +187,26 @@ export default function HiveDetailScreen() {
   );
 }
 
-function MetaChip({ label }: { label: string }) {
+function MetaChip({ label, highlight = false }: { label: string; highlight?: boolean }) {
   return (
-    <View style={styles.metaChip}>
-      <Text style={styles.metaChipText}>{label}</Text>
+    <View style={[styles.metaChip, highlight && styles.metaChipPro]}>
+      <Text style={[styles.metaChipText, highlight && styles.metaChipTextPro]}>{label}</Text>
     </View>
   );
 }
 
-function ChartSection({ title, data, color, width }: {
-  title: string; data: { label: string; value: number }[]; color: string; width: number
+function ChartSection({ title, subtitle, data, color, width }: {
+  title: string; subtitle: string; data: { label: string; value: number }[]; color: string; width: number
 }) {
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>{title}</Text>
+      <View style={styles.chartHeader}>
+        <View style={[styles.chartAccent, { backgroundColor: color }]} />
+        <View>
+          <Text style={styles.cardTitle}>{title}</Text>
+          <Text style={styles.chartSubtitle}>{subtitle}</Text>
+        </View>
+      </View>
       <LineChart data={data} color={color} width={width} height={160} />
     </View>
   );
@@ -200,43 +219,64 @@ function formatTime(iso: string): string {
 
 const styles = StyleSheet.create({
   scroll: { backgroundColor: Colors.light },
-  content: { padding: 16, paddingBottom: 40, gap: 12 },
+  content: { padding: 16, paddingBottom: 40, gap: 14 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.light },
+
   headerCard: {
-    backgroundColor: Colors.white, borderRadius: 16, padding: 16,
-    borderTopWidth: 4, shadowColor: Colors.dark, shadowOpacity: 0.08,
-    shadowRadius: 8, elevation: 3,
+    backgroundColor: Colors.white, borderRadius: 20, overflow: 'hidden',
+    shadowColor: Colors.dark, shadowOpacity: 0.1, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 }, elevation: 4,
   },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  name: { fontSize: 20, fontWeight: '800', color: Colors.charcoal, flex: 1 },
-  location: { fontSize: 12, color: Colors.mid, marginTop: 3 },
+  headerTint: { height: 6 },
+  headerInner: { padding: 18 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  name: { fontSize: 22, fontWeight: '800', color: Colors.charcoal },
+  location: { fontSize: 13, color: Colors.mid, marginTop: 4 },
   metaRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  metaChip: { backgroundColor: Colors.light, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  metaChipText: { fontSize: 11, color: Colors.mid },
+  metaChip: { backgroundColor: Colors.light, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 999 },
+  metaChipText: { fontSize: 11, color: Colors.mid, fontWeight: '600' },
+  metaChipPro: { backgroundColor: Colors.honeyLight },
+  metaChipTextPro: { color: Colors.honeyDark, fontWeight: '800' },
+
   offlineBanner: {
-    backgroundColor: '#EEF0F2', borderRadius: 12, padding: 14,
+    backgroundColor: '#EEF0F2', borderRadius: 14, padding: 14,
     borderLeftWidth: 4, borderLeftColor: Colors.mid,
   },
   offlineText: { fontSize: 13, fontWeight: '600', color: Colors.mid },
   waspBanner: {
-    backgroundColor: '#FDECEA', borderRadius: 12, padding: 14,
+    backgroundColor: '#FDECEA', borderRadius: 14, padding: 14,
     borderLeftWidth: 4, borderLeftColor: Colors.danger,
   },
   waspText: { fontSize: 14, fontWeight: '700', color: Colors.danger },
+
   card: {
-    backgroundColor: Colors.white, borderRadius: 16, padding: 16,
-    shadowColor: Colors.dark, shadowOpacity: 0.07, shadowRadius: 8, elevation: 2,
-  },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: Colors.charcoal, marginBottom: 10 },
-  actionsSection: {
-    backgroundColor: Colors.white, borderRadius: 16, padding: 16,
-    shadowColor: Colors.dark, shadowOpacity: 0.07, shadowRadius: 8, elevation: 2,
+    backgroundColor: Colors.white, borderRadius: 20, padding: 18,
+    shadowColor: Colors.dark, shadowOpacity: 0.07, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3,
     gap: 10,
   },
-  actionBtn: {
-    backgroundColor: Colors.honey, borderRadius: 12, padding: 14, alignItems: 'center',
+  cardTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardTitle: { fontSize: 15, fontWeight: '800', color: Colors.charcoal },
+  liveTag: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#E8F5EC', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999,
   },
-  actionBtnSecondary: { backgroundColor: Colors.white, borderWidth: 2, borderColor: Colors.honey },
-  actionText: { color: Colors.dark, fontWeight: '700', fontSize: 15 },
-  actionTextSecondary: { color: Colors.honey, fontWeight: '700', fontSize: 15 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: StatusColor.healthy },
+  liveText: { fontSize: 9, fontWeight: '800', color: StatusColor.healthy, letterSpacing: 0.6 },
+
+  chartHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+  chartAccent: { width: 4, height: 30, borderRadius: 2 },
+  chartSubtitle: { fontSize: 11, color: Colors.mid, marginTop: 1 },
+
+  actionBtn: {
+    backgroundColor: Colors.honey, borderRadius: 14, padding: 15, alignItems: 'center',
+    shadowColor: Colors.honey, shadowOpacity: 0.35, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3,
+  },
+  actionBtnSecondary: {
+    backgroundColor: Colors.white, borderWidth: 2, borderColor: Colors.honey,
+    shadowOpacity: 0, elevation: 0,
+  },
+  actionText: { color: Colors.dark, fontWeight: '800', fontSize: 15 },
+  actionTextSecondary: { color: Colors.honeyDark, fontWeight: '800', fontSize: 15 },
 });

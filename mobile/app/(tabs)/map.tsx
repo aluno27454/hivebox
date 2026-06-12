@@ -17,8 +17,6 @@ export default function MapScreen() {
 
   const load = useCallback(() => {
     setError(false);
-    // Só mostra o spinner na primeira carga; nos refocus seguintes
-    // atualiza silenciosamente em vez de "piscar" o mapa
     if (firstLoad.current) setLoading(true);
     api.hives.list()
       .then(data => { setHives(data); firstLoad.current = false; })
@@ -40,7 +38,6 @@ export default function MapScreen() {
     return <ErrorView onRetry={load} />;
   }
 
-  // Center map on centroid of all hives
   const avgLat = hives.reduce((s, h) => s + h.location.latitude, 0) / (hives.length || 1);
   const avgLng = hives.reduce((s, h) => s + h.location.longitude, 0) / (hives.length || 1);
 
@@ -59,12 +56,13 @@ export default function MapScreen() {
           <Marker
             key={hive.id}
             coordinate={{ latitude: hive.location.latitude, longitude: hive.location.longitude }}
-            // tracksViewChanges={false}: sem isto, markers com children custom
-            // re-renderizam a cada frame no Android — grande ganho de performance
             tracksViewChanges={false}
           >
-            <View style={[styles.markerPin, { backgroundColor: StatusColor[hive.status] }]}>
-              <Text style={styles.markerEmoji}>🍯</Text>
+            {/* Anel exterior translúcido + pino colorido */}
+            <View style={[styles.markerRing, { backgroundColor: `${StatusColor[hive.status]}33` }]}>
+              <View style={[styles.markerPin, { backgroundColor: StatusColor[hive.status] }]}>
+                <Text style={styles.markerEmoji}>🍯</Text>
+              </View>
             </View>
             <Callout onPress={() => router.push(`/hive/${hive.id}`)}>
               <View style={styles.callout}>
@@ -91,6 +89,7 @@ export default function MapScreen() {
 
       {/* Legend */}
       <View style={styles.legend}>
+        <Text style={styles.legendTitle}>Estado</Text>
         {(['healthy', 'warning', 'danger', 'offline'] as const).map(s => (
           <View key={s} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: StatusColor[s] }]} />
@@ -100,6 +99,11 @@ export default function MapScreen() {
           </View>
         ))}
       </View>
+
+      {/* Contador de colmeias */}
+      <View style={styles.countPill}>
+        <Text style={styles.countText}>🍯 {hives.length} colmeia{hives.length !== 1 ? 's' : ''}</Text>
+      </View>
     </View>
   );
 }
@@ -108,27 +112,43 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.light },
-  markerPin: {
-    width: 36, height: 36, borderRadius: 18,
+  markerRing: {
+    width: 48, height: 48, borderRadius: 24,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: Colors.white,
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
   },
-  markerEmoji: { fontSize: 16 },
+  markerPin: {
+    width: 34, height: 34, borderRadius: 17,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2.5, borderColor: Colors.white,
+    shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 4, elevation: 4,
+  },
+  markerEmoji: { fontSize: 15 },
   callout: { width: 200, padding: 10, gap: 6 },
-  calloutName: { fontSize: 14, fontWeight: '700', color: Colors.charcoal },
+  calloutName: { fontSize: 14, fontWeight: '800', color: Colors.charcoal },
   calloutSensor: { fontSize: 12, color: Colors.mid },
   calloutBtn: {
     marginTop: 4, backgroundColor: Colors.honey,
-    borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10,
+    borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10,
   },
-  calloutBtnText: { color: Colors.dark, fontWeight: '700', fontSize: 12, textAlign: 'center' },
+  calloutBtnText: { color: Colors.dark, fontWeight: '800', fontSize: 12, textAlign: 'center' },
   legend: {
     position: 'absolute', bottom: 24, left: 16,
-    backgroundColor: Colors.white, borderRadius: 12, padding: 10, gap: 6,
-    shadowColor: Colors.dark, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4,
+    backgroundColor: Colors.white, borderRadius: 16, padding: 12, gap: 7,
+    shadowColor: Colors.dark, shadowOpacity: 0.15, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 }, elevation: 5,
   },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendTitle: {
+    fontSize: 10, fontWeight: '800', color: Colors.mid,
+    textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 1,
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontSize: 12, color: Colors.charcoal },
+  legendText: { fontSize: 12, color: Colors.charcoal, fontWeight: '600' },
+  countPill: {
+    position: 'absolute', top: 14, alignSelf: 'center',
+    backgroundColor: Colors.dark, borderRadius: 999,
+    paddingHorizontal: 14, paddingVertical: 7,
+    shadowColor: Colors.dark, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5,
+  },
+  countText: { color: Colors.white, fontSize: 12, fontWeight: '700' },
 });

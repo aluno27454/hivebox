@@ -9,12 +9,18 @@ import { Colors, StatusColor } from '@/lib/colors';
 import { HiveCard } from '@/components/HiveCard';
 import { ErrorView } from '@/components/ErrorView';
 
-// Saudação dinâmica consoante a hora do dia
 function greeting(): string {
   const h = new Date().getHours();
   if (h >= 6 && h < 13) return 'Bom dia';
   if (h >= 13 && h < 20) return 'Boa tarde';
   return 'Boa noite';
+}
+
+function todayLabel(): string {
+  const d = new Date().toLocaleDateString('pt-PT', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
+  return d.charAt(0).toUpperCase() + d.slice(1);
 }
 
 export default function DashboardScreen() {
@@ -49,6 +55,12 @@ export default function DashboardScreen() {
     offline: hives.filter(h => h.status === 'offline').length,
   };
 
+  // Frase de estado geral do apiário no hero
+  const heroStatus =
+    counts.danger > 0 ? { text: `${counts.danger} colmeia${counts.danger > 1 ? 's' : ''} em perigo`, color: StatusColor.danger }
+    : counts.warning > 0 ? { text: `${counts.warning} colmeia${counts.warning > 1 ? 's' : ''} a precisar de atenção`, color: StatusColor.warning }
+    : { text: 'Tudo tranquilo no apiário', color: StatusColor.healthy };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -57,7 +69,6 @@ export default function DashboardScreen() {
     );
   }
 
-  // Erro só ocupa o ecrã se não houver dados anteriores para mostrar
   if (error && hives.length === 0) {
     return <ErrorView onRetry={() => load()} />;
   }
@@ -71,10 +82,17 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.honey} />}
       ListHeaderComponent={
         <View>
-          <View style={styles.header}>
-            <Text style={styles.greeting}>{greeting()}, Apicultor 🐝</Text>
-            <Text style={styles.subtitle}>Aqui está o estado do teu apiário</Text>
+          {/* Hero escuro com acento mel */}
+          <View style={styles.hero}>
+            <Text style={styles.heroBee}>🐝</Text>
+            <Text style={styles.heroDate}>{todayLabel()}</Text>
+            <Text style={styles.heroGreeting}>{greeting()}, Apicultor</Text>
+            <View style={styles.heroStatusRow}>
+              <View style={[styles.heroStatusDot, { backgroundColor: heroStatus.color }]} />
+              <Text style={styles.heroStatusText}>{heroStatus.text}</Text>
+            </View>
           </View>
+
           {error && (
             <View style={styles.staleBanner}>
               <Text style={styles.staleText}>
@@ -82,6 +100,8 @@ export default function DashboardScreen() {
               </Text>
             </View>
           )}
+
+          {/* Estatísticas sobrepostas ao hero */}
           <View style={styles.statsRow}>
             <StatCard label="Total" value={counts.total} color={Colors.charcoal} />
             <StatCard label="Saudáveis" value={counts.healthy} color={StatusColor.healthy} />
@@ -91,12 +111,20 @@ export default function DashboardScreen() {
               <StatCard label="Offline" value={counts.offline} color={StatusColor.offline} />
             )}
           </View>
-          <Text style={styles.sectionTitle}>Colmeias</Text>
+
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionTitle}>As tuas colmeias</Text>
+            <Text style={styles.sectionCount}>{counts.total}</Text>
+          </View>
         </View>
       }
       renderItem={({ item }) => <HiveCard hive={item} />}
       ListEmptyComponent={
-        <Text style={styles.empty}>Nenhuma colmeia encontrada.</Text>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>🍯</Text>
+          <Text style={styles.empty}>Nenhuma colmeia encontrada.</Text>
+          <Text style={styles.emptyHint}>Liga a tua primeira Hive Box para começares.</Text>
+        </View>
       }
     />
   );
@@ -104,7 +132,7 @@ export default function DashboardScreen() {
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <View style={styles.stat}>
+    <View style={[styles.stat, { borderTopColor: color }]}>
       <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -113,34 +141,84 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 
 const styles = StyleSheet.create({
   list: { backgroundColor: Colors.light },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { paddingBottom: 32 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.light },
-  header: { marginBottom: 16 },
-  greeting: { fontSize: 22, fontWeight: '800', color: Colors.charcoal },
-  subtitle: { fontSize: 14, color: Colors.mid, marginTop: 2 },
+
+  hero: {
+    backgroundColor: Colors.dark,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 44,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
+  },
+  heroBee: {
+    position: 'absolute',
+    right: -8,
+    top: 4,
+    fontSize: 96,
+    opacity: 0.12,
+    transform: [{ rotate: '-15deg' }],
+  },
+  heroDate: {
+    color: Colors.honey,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
+  heroGreeting: { color: Colors.white, fontSize: 26, fontWeight: '800' },
+  heroStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8 },
+  heroStatusDot: { width: 8, height: 8, borderRadius: 4 },
+  heroStatusText: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '600' },
+
   staleBanner: {
-    backgroundColor: '#FFF6E5', borderRadius: 10, padding: 10,
-    marginBottom: 12, borderLeftWidth: 3, borderLeftColor: Colors.honey,
+    backgroundColor: '#FFF6E5', borderRadius: 12, padding: 10,
+    marginHorizontal: 16, marginTop: 12,
+    borderLeftWidth: 3, borderLeftColor: Colors.honey,
   },
   staleText: { fontSize: 12, color: Colors.charcoal, fontWeight: '600' },
+
   statsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    marginTop: -26, // sobrepõe o hero
+    marginBottom: 24,
   },
   stat: {
     flex: 1,
     backgroundColor: Colors.white,
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 16,
+    borderTopWidth: 3,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
     alignItems: 'center',
     shadowColor: Colors.dark,
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   statValue: { fontSize: 24, fontWeight: '800' },
-  statLabel: { fontSize: 10, color: Colors.mid, marginTop: 2, fontWeight: '600' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.charcoal, marginBottom: 10 },
-  empty: { textAlign: 'center', color: Colors.mid, marginTop: 40 },
+  statLabel: { fontSize: 10, color: Colors.mid, marginTop: 3, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+
+  sectionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 16, marginBottom: 12,
+  },
+  sectionTitle: { fontSize: 17, fontWeight: '800', color: Colors.charcoal },
+  sectionCount: {
+    backgroundColor: Colors.honey, color: Colors.dark,
+    fontSize: 12, fontWeight: '800',
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
+    overflow: 'hidden',
+  },
+
+  emptyContainer: { alignItems: 'center', marginTop: 40, paddingHorizontal: 32, gap: 6 },
+  emptyIcon: { fontSize: 44, marginBottom: 4 },
+  empty: { textAlign: 'center', color: Colors.charcoal, fontSize: 15, fontWeight: '700' },
+  emptyHint: { textAlign: 'center', color: Colors.mid, fontSize: 13 },
 });

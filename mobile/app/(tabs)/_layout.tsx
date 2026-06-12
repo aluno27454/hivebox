@@ -11,15 +11,16 @@ if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-const TAB_HEIGHT = 60;
+const TAB_HEIGHT = 62;
 const AUTO_HIDE_DELAY = 4000;
 const IS_ANDROID = Platform.OS === 'android';
 
+// Ícones outline/filled consoante o estado ativo
 const ICONS = {
-  index: 'grid',
-  map: 'map',
-  graficos: 'bar-chart',
-  alertas: 'notifications',
+  index: { inactive: 'grid-outline', active: 'grid' },
+  map: { inactive: 'map-outline', active: 'map' },
+  graficos: { inactive: 'bar-chart-outline', active: 'bar-chart' },
+  alertas: { inactive: 'notifications-outline', active: 'notifications' },
 } as const;
 
 const LABELS: Record<string, string> = {
@@ -75,7 +76,8 @@ function CustomTabBar({ state, navigation, visible, onTabPress }: TabBarProps) {
     >
       {state.routes.map((route, index) => {
         const focused = state.index === index;
-        const icon = ICONS[route.name as keyof typeof ICONS];
+        const iconSet = ICONS[route.name as keyof typeof ICONS];
+        const icon = focused ? iconSet.active : iconSet.inactive;
         const badge = route.name === 'alertas' && unreadCount > 0 ? unreadCount : 0;
         return (
           <Pressable
@@ -87,15 +89,16 @@ function CustomTabBar({ state, navigation, visible, onTabPress }: TabBarProps) {
               if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
             }}
           >
-            <View>
-              <Ionicons name={icon as any} size={24} color={focused ? Colors.honey : Colors.mid} />
+            {/* Cápsula mel atrás do ícone ativo */}
+            <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+              <Ionicons name={icon as any} size={22} color={focused ? Colors.dark : Colors.mid} />
               {badge > 0 && (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{badge}</Text>
+                  <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
                 </View>
               )}
             </View>
-            <Text style={[styles.tabLabel, { color: focused ? Colors.honey : Colors.mid }]}>
+            <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
               {LABELS[route.name]}
             </Text>
           </Pressable>
@@ -159,24 +162,37 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
     borderTopWidth: 1,
     flexDirection: 'row',
-    paddingTop: 4,
+    paddingTop: 6,
     elevation: 8,
+    shadowColor: Colors.dark,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
   },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
-  tabLabel: { fontSize: 11, fontWeight: '600', marginTop: 2 },
+  iconWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  iconWrapActive: { backgroundColor: Colors.honey },
+  tabLabel: { fontSize: 10.5, fontWeight: '600', marginTop: 3, color: Colors.mid },
+  tabLabelActive: { color: Colors.charcoal, fontWeight: '800' },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -8,
+    top: -3,
+    right: 6,
     backgroundColor: Colors.danger,
     borderRadius: 8,
     minWidth: 16,
     height: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 2,
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: Colors.white,
   },
-  badgeText: { color: Colors.white, fontSize: 10, fontWeight: '700' },
+  badgeText: { color: Colors.white, fontSize: 9, fontWeight: '700' },
   swipeTrigger: {
     position: 'absolute',
     left: 0,
