@@ -23,8 +23,9 @@
   body{
     font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
     background:var(--bg);color:var(--text);overflow:hidden;
+    touch-action:none;
   }
-  #scene{position:fixed;inset:0;cursor:grab}
+  #scene{position:fixed;inset:0;cursor:grab;touch-action:none}
   #scene:active{cursor:grabbing}
 
   /* ---------- overlay de carregamento ---------- */
@@ -78,7 +79,17 @@
     padding:14px 16px 10px;border-bottom:1px solid var(--line-soft);
     display:flex;justify-content:space-between;align-items:center;
   }
-  aside h2 span:last-child{color:var(--honey)}
+  aside h2 span:last-child{color:var(--honey);display:flex;align-items:center;gap:7px}
+  #btnCollapse{
+    background:none;border:none;color:var(--muted);cursor:pointer;
+    font-size:13px;line-height:1;padding:2px 5px;border-radius:5px;
+    transition:color .15s, transform .25s;pointer-events:auto;
+  }
+  #btnCollapse:hover{color:var(--honey)}
+  aside.collapsed #btnCollapse{transform:rotate(180deg)}
+  aside.collapsed #legend,aside.collapsed #detail{display:none!important}
+  aside.collapsed{width:auto;max-height:none}
+  aside.collapsed h2{border-bottom:none;padding-bottom:14px}
   #legend{list-style:none;overflow:auto;padding:6px}
   #legend li{
     display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:9px;
@@ -132,6 +143,7 @@
 
   @media(max-width:760px){
     aside{left:12px;width:208px;top:104px}
+    aside.collapsed{width:auto}
     header{padding:16px 18px 30px}
     .chips{display:none}
     .hint{display:none}
@@ -163,7 +175,7 @@
 </header>
 
 <aside>
-  <h2><span>Componentes</span><span id="count"></span></h2>
+  <h2><span>Componentes</span><span><span id="count"></span><button id="btnCollapse" aria-label="Minimizar painel" title="Minimizar">▲</button></span></h2>
   <ul id="legend"></ul>
   <div id="detail"><h3></h3><p></p></div>
 </aside>
@@ -831,13 +843,16 @@ container.addEventListener('wheel', e=>{
   hintEl.classList.add('fade');
 },{passive:false});
 let pinchD=0;
+// passive:false + preventDefault prevents browser from interpreting
+// pinch/swipe as page zoom or back-navigation on mobile
 container.addEventListener('touchmove', e=>{
+  e.preventDefault();
   if(e.touches.length===2){
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
     if(pinchD){ radius -= (d-pinchD)*0.03; camGoal.radius = radius; }
     pinchD=d;
   }
-},{passive:true});
+},{passive:false});
 container.addEventListener('touchend', ()=>pinchD=0);
 
 /* ---------- controlos ---------- */
@@ -845,6 +860,11 @@ let exploded=false, labelsOn=false, autoRotate=true;
 const btnExplode=document.getElementById('btnExplode');
 const btnLabels=document.getElementById('btnLabels');
 const btnRotate=document.getElementById('btnRotate');
+const asideEl=document.querySelector('aside');
+const btnCollapse=document.getElementById('btnCollapse');
+btnCollapse.addEventListener('click', ()=>asideEl.classList.toggle('collapsed'));
+// start collapsed on mobile
+if(window.innerWidth<=760) asideEl.classList.add('collapsed');
 
 btnExplode.addEventListener('click', ()=>{
   exploded=!exploded;

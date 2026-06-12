@@ -13,6 +13,7 @@ export default function PrototipoPage() {
         className="w-full h-full border-0 block"
         title="Modelo 3D Hive Box"
         allow="accelerometer; autoplay"
+        style={{ touchAction: 'none' }}
       />
     </main>
   );
