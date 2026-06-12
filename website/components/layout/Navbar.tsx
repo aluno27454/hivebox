@@ -63,7 +63,13 @@ export default function Navbar() {
           })}
         </ul>
 
-        <div className="hidden lg:flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-3">
+          <Link
+            href="/prototipo"
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-sm font-semibold border-2 border-honey text-honey hover:bg-honey hover:text-dark transition-all duration-200 hover:-translate-y-0.5"
+          >
+            Protótipo 3D
+          </Link>
           <Link
             href="/contacto"
             className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-sm font-semibold bg-honey text-dark hover:bg-honey-dark transition-all duration-200 hover:-translate-y-0.5"
@@ -107,7 +113,13 @@ export default function Navbar() {
             );
           })}
         </ul>
-        <div className="mt-8">
+        <div className="mt-8 flex flex-col gap-3">
+          <Link
+            href="/prototipo"
+            className="block w-full text-center py-4 rounded-full border-2 border-honey text-honey font-semibold text-lg hover:bg-honey hover:text-dark transition-colors"
+          >
+            Protótipo 3D
+          </Link>
           <Link
             href="/contacto"
             className="block w-full text-center py-4 rounded-full bg-honey text-dark font-semibold text-lg hover:bg-honey-dark transition-colors"

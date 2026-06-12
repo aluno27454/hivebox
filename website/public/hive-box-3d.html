@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hive Box — Colmeia Inteligente · Modelo 3D</title>
+<style>
+  :root{
+    --bg:#0c100a;
+    --panel:rgba(17,23,15,.82);
+    --panel-solid:#141a11;
+    --line:rgba(242,169,59,.16);
+    --line-soft:rgba(232,234,217,.08);
+    --text:#f0eee0;
+    --muted:#9da88c;
+    --honey:#f2a93b;
+    --honey-dim:#c98a2e;
+    --leaf:#8fc973;
+    --danger:#e06c4f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
+    background:var(--bg);color:var(--text);overflow:hidden;
+  }
+  #scene{position:fixed;inset:0;cursor:grab}
+  #scene:active{cursor:grabbing}
+
+  /* ---------- overlay de carregamento ---------- */
+  #loader{
+    position:fixed;inset:0;background:var(--bg);z-index:50;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    transition:opacity .8s ease;
+  }
+  #loader.done{opacity:0;pointer-events:none}
+  .hexspin{
+    width:46px;height:52px;
+    background:var(--honey);
+    clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{transform:scale(.85);opacity:.55}50%{transform:scale(1);opacity:1}}
+  #loader p{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)}
+
+  /* ---------- cabeçalho ---------- */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:10;pointer-events:none;
+    padding:22px 28px 40px;
+    background:linear-gradient(180deg,rgba(12,16,10,.92) 0%,rgba(12,16,10,.55) 55%,transparent 100%);
+  }
+  .eyebrow{
+    font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--honey);
+    margin-bottom:6px;font-weight:600;
+  }
+  header h1{
+    font-size:clamp(26px,4vw,40px);font-weight:300;letter-spacing:1px;line-height:1;
+  }
+  header h1 b{font-weight:700;color:var(--honey)}
+  .chips{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .chip{
+    pointer-events:auto;
+    font-size:10px;letter-spacing:1.6px;text-transform:uppercase;
+    padding:6px 12px;border:1px solid var(--line);border-radius:999px;
+    color:var(--muted);background:rgba(17,23,15,.5);backdrop-filter:blur(6px);
+  }
+  .chip b{color:var(--text);font-weight:600}
+
+  /* ---------- painel de componentes ---------- */
+  aside{
+    position:fixed;top:120px;left:22px;width:252px;z-index:10;
+    max-height:calc(100vh - 220px);display:flex;flex-direction:column;
+    background:var(--panel);backdrop-filter:blur(12px);
+    border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;
+  }
+  aside h2{
+    font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);
+    padding:14px 16px 10px;border-bottom:1px solid var(--line-soft);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  aside h2 span:last-child{color:var(--honey)}
+  #legend{list-style:none;overflow:auto;padding:6px}
+  #legend li{
+    display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:9px;
+    cursor:pointer;transition:background .15s;
+  }
+  #legend li:hover{background:rgba(242,169,59,.07)}
+  #legend li.active{background:rgba(242,169,59,.13)}
+  #legend li.dim{opacity:.4}
+  .hex{
+    width:15px;height:17px;flex:none;
+    clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  }
+  #legend .code{
+    font-size:9px;color:var(--muted);letter-spacing:1px;width:34px;flex:none;
+    font-variant-numeric:tabular-nums;
+  }
+  #legend .nome{font-size:12.5px;line-height:1.25}
+
+  /* cartão de detalhe */
+  #detail{
+    border-top:1px solid var(--line-soft);padding:14px 16px;display:none;
+    background:rgba(242,169,59,.05);
+  }
+  #detail.show{display:block}
+  #detail h3{font-size:13px;color:var(--honey);margin-bottom:5px;font-weight:600}
+  #detail p{font-size:11.5px;color:var(--muted);line-height:1.55}
+
+  /* ---------- barra de controlo ---------- */
+  .controls{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10;
+    display:flex;gap:6px;padding:6px;border-radius:999px;
+    background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--line-soft);
+  }
+  .controls button{
+    display:flex;align-items:center;gap:8px;
+    background:transparent;border:none;color:var(--muted);
+    padding:10px 18px;border-radius:999px;font-size:12px;letter-spacing:.4px;
+    cursor:pointer;font-family:inherit;transition:all .2s;
+  }
+  .controls button svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .controls button:hover{color:var(--text)}
+  .controls button:focus-visible{outline:2px solid var(--honey);outline-offset:2px}
+  .controls button.on{background:rgba(242,169,59,.14);color:var(--honey)}
+
+  .hint{
+    position:fixed;bottom:78px;left:50%;transform:translateX(-50%);z-index:9;
+    font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(157,168,140,.55);
+    pointer-events:none;transition:opacity 1s;
+  }
+  .hint.fade{opacity:0}
+
+  @media(max-width:760px){
+    aside{left:12px;width:208px;top:104px}
+    header{padding:16px 18px 30px}
+    .chips{display:none}
+    .hint{display:none}
+    .controls button{padding:9px 13px}
+    .controls button span{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="hexspin"></div>
+  <p>A construir a Hive Box</p>
+</div>
+
+<div id="scene"></div>
+
+<header>
+  <div class="eyebrow">Apicultura inteligente · IoT</div>
+  <h1>Hive <b>Box</b></h1>
+  <div class="chips">
+    <div class="chip"><b>IP67</b> · ABS</div>
+    <div class="chip">Solar <b>20 W</b></div>
+    <div class="chip"><b>4G</b> + LoRaWAN</div>
+    <div class="chip">GPS</div>
+    <div class="chip">Visão computacional</div>
+    <div class="chip">Anti-vespa <b>ativo</b></div>
+  </div>
+</header>
+
+<aside>
+  <h2><span>Componentes</span><span id="count"></span></h2>
+  <ul id="legend"></ul>
+  <div id="detail"><h3></h3><p></p></div>
+</aside>
+
+<div class="hint" id="hint">Arrastar para rodar · scroll para zoom · clicar num componente</div>
+
+<div class="controls">
+  <button id="btnExplode">
+    <svg viewBox="0 0 24 24"><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></svg>
+    <span>Vista explodida</span>
+  </button>
+  <button id="btnLabels">
+    <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg>
+    <span>Etiquetas</span>
+  </button>
+  <button id="btnRotate" class="on">
+    <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>
+    <span>Rotação</span>
+  </button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   HIVE BOX — modelo 3D profissional
+   ============================================================ */
+const container = document.getElementById('scene');
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+renderer.outputEncoding = THREE.sRGBEncoding;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+
+/* ---------- céu em gradiente (fim de tarde dourado) ---------- */
+function skyTexture(){
+  const c = document.createElement('canvas'); c.width = 16; c.height = 512;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0,0,0,512);
+  grad.addColorStop(0.00,'#0e1410');
+  grad.addColorStop(0.45,'#16201a');
+  grad.addColorStop(0.72,'#2b2c1c');
+  grad.addColorStop(0.86,'#4a3a1d');
+  grad.addColorStop(1.00,'#1a160e');
+  g.fillStyle = grad; g.fillRect(0,0,16,512);
+  const t = new THREE.CanvasTexture(c);
+  t.encoding = THREE.sRGBEncoding;
+  return t;
+}
+scene.background = skyTexture();
+scene.fog = new THREE.Fog(0x141a12, 28, 75);
+
+/* ---------- ambiente (cubemap procedural p/ reflexos) ---------- */
+function envFace(top, mid, bottom){
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0,0,0,64);
+  grad.addColorStop(0, top); grad.addColorStop(.6, mid); grad.addColorStop(1, bottom);
+  g.fillStyle = grad; g.fillRect(0,0,64,64);
+  return c;
+}
+const envTex = new THREE.CubeTexture([
+  envFace('#6f6243','#3a3a2a','#181a12'), envFace('#6f6243','#3a3a2a','#181a12'),
+  envFace('#b9a76b','#8d7a47','#6f6243'), envFace('#181a12','#10120c','#0a0c08'),
+  envFace('#8a7a4d','#43402c','#181a12'), envFace('#6f6243','#3a3a2a','#181a12'),
+]);
+envTex.needsUpdate = true;
+envTex.encoding = THREE.sRGBEncoding;
+scene.environment = envTex;
+
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 200);
+
+/* ---------- iluminação ---------- */
+scene.add(new THREE.HemisphereLight(0xd8e0c4, 0x1c1810, 0.5));
+
+const sun = new THREE.DirectionalLight(0xffd9a0, 1.6);
+sun.position.set(12, 14, 9);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left=-12; sun.shadow.camera.right=12;
+sun.shadow.camera.top=14;  sun.shadow.camera.bottom=-6;
+sun.shadow.bias = -0.0004;
+sun.shadow.radius = 4;
+scene.add(sun);
+
+const rim = new THREE.DirectionalLight(0x9fc8e8, 0.55);
+rim.position.set(-10, 7, -8);
+scene.add(rim);
+
+const bounce = new THREE.DirectionalLight(0xf2a93b, 0.22);
+bounce.position.set(0, -3, 6);
+scene.add(bounce);
+
+/* ---------- chão ---------- */
+function groundTexture(){
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(256,256,40,256,256,256);
+  grad.addColorStop(0,'#232b1c'); grad.addColorStop(.55,'#1a2115'); grad.addColorStop(1,'#10140c');
+  g.fillStyle = grad; g.fillRect(0,0,512,512);
+  // textura subtil de erva
+  for(let i=0;i<2600;i++){
+    const x=Math.random()*512, y=Math.random()*512;
+    const d=Math.hypot(x-256,y-256)/256;
+    g.fillStyle = Math.random()>.5 ? 'rgba(70,86,48,'+(0.16*(1-d))+')' : 'rgba(20,26,14,'+(0.25*(1-d))+')';
+    g.fillRect(x,y,1.6,Math.random()*3.5+1);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.encoding = THREE.sRGBEncoding;
+  return t;
+}
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(34, 64),
+  new THREE.MeshStandardMaterial({map:groundTexture(), roughness:1})
+);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+/* sombra de contacto suave */
+function contactShadow(){
+  const c = document.createElement('canvas'); c.width=c.height=256;
+  const g=c.getContext('2d');
+  const grad=g.createRadialGradient(128,128,10,128,128,128);
+  grad.addColorStop(0,'rgba(0,0,0,.5)');grad.addColorStop(.7,'rgba(0,0,0,.18)');grad.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=grad;g.fillRect(0,0,256,256);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(11,9),
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));
+  m.rotation.x=-Math.PI/2;m.position.y=0.012;
+  return m;
+}
+scene.add(contactShadow());
+
+/* ---------- texturas procedurais ---------- */
+function woodTexture(base='#c79a5e', dark='#8d6534', light='#e0b87c'){
+  const c=document.createElement('canvas'); c.width=256; c.height=256;
+  const g=c.getContext('2d');
+  g.fillStyle=base; g.fillRect(0,0,256,256);
+  for(let i=0;i<70;i++){
+    const y=Math.random()*256;
+    g.strokeStyle=Math.random()>.5?dark:light;
+    g.globalAlpha=Math.random()*0.16+0.04;
+    g.lineWidth=Math.random()*2.4+0.4;
+    g.beginPath();
+    g.moveTo(0,y);
+    for(let x=0;x<=256;x+=32) g.lineTo(x, y+Math.sin(x*0.05+i)*3+(Math.random()-0.5)*2);
+    g.stroke();
+  }
+  // nós da madeira
+  g.globalAlpha=0.2;
+  for(let i=0;i<3;i++){
+    const x=Math.random()*256,y=Math.random()*256;
+    const grad=g.createRadialGradient(x,y,1,x,y,9);
+    grad.addColorStop(0,dark);grad.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=grad;g.beginPath();g.arc(x,y,9,0,7);g.fill();
+  }
+  g.globalAlpha=1;
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  t.encoding=THREE.sRGBEncoding;
+  return t;
+}
+function solarTexture(){
+  const c=document.createElement('canvas'); c.width=512; c.height=384;
+  const g=c.getContext('2d');
+  g.fillStyle='#0b1530'; g.fillRect(0,0,512,384);
+  const cols=8, rows=5, pw=512/cols, ph=384/rows;
+  for(let i=0;i<cols;i++)for(let j=0;j<rows;j++){
+    const x=i*pw, y=j*ph;
+    const grad=g.createLinearGradient(x,y,x+pw,y+ph);
+    grad.addColorStop(0,'#152a55'); grad.addColorStop(.5,'#0e1f44'); grad.addColorStop(1,'#0a1530');
+    g.fillStyle=grad;
+    g.fillRect(x+3,y+3,pw-6,ph-6);
+    // micro-linhas das células
+    g.strokeStyle='rgba(120,160,220,.18)'; g.lineWidth=1;
+    for(let k=1;k<6;k++){g.beginPath();g.moveTo(x+3,y+k*ph/6);g.lineTo(x+pw-3,y+k*ph/6);g.stroke();}
+  }
+  // brilho diagonal
+  const sh=g.createLinearGradient(0,0,512,384);
+  sh.addColorStop(.3,'rgba(255,255,255,0)');sh.addColorStop(.5,'rgba(190,215,255,.12)');sh.addColorStop(.7,'rgba(255,255,255,0)');
+  g.fillStyle=sh;g.fillRect(0,0,512,384);
+  const t=new THREE.CanvasTexture(c);
+  t.encoding=THREE.sRGBEncoding;
+  return t;
+}
+
+/* ---------- materiais ---------- */
+const woodMap = woodTexture();
+const woodDarkMap = woodTexture('#9a7240','#6b4a22','#b8905a');
+const M = {
+  madeira:   new THREE.MeshStandardMaterial({map:woodMap, roughness:0.78, envMapIntensity:0.4}),
+  madeiraEsc:new THREE.MeshStandardMaterial({map:woodDarkMap, roughness:0.85, envMapIntensity:0.3}),
+  abs:       new THREE.MeshStandardMaterial({color:0x29302b, roughness:0.42, metalness:0.12, envMapIntensity:0.7}),
+  absClaro:  new THREE.MeshStandardMaterial({color:0x39423a, roughness:0.4, metalness:0.12, envMapIntensity:0.7}),
+  solar:     new THREE.MeshStandardMaterial({map:solarTexture(), roughness:0.18, metalness:0.55, envMapIntensity:1.4}),
+  alu:       new THREE.MeshStandardMaterial({color:0xb9c0c6, roughness:0.3, metalness:0.92, envMapIntensity:1.1}),
+  aluEscuro: new THREE.MeshStandardMaterial({color:0x6b7176, roughness:0.45, metalness:0.85, envMapIntensity:0.9}),
+  fio:       new THREE.MeshStandardMaterial({color:0xe2e6ea, roughness:0.22, metalness:0.95, envMapIntensity:1.4}),
+  pcbVerde:  new THREE.MeshStandardMaterial({color:0x1d7a33, roughness:0.55, envMapIntensity:0.5}),
+  pcbAzul:   new THREE.MeshStandardMaterial({color:0x1f4f8a, roughness:0.55, envMapIntensity:0.5}),
+  bateria:   new THREE.MeshStandardMaterial({color:0x32508c, roughness:0.5, envMapIntensity:0.6}),
+  branco:    new THREE.MeshStandardMaterial({color:0xe9e9df, roughness:0.65, envMapIntensity:0.5}),
+  preto:     new THREE.MeshStandardMaterial({color:0x17181a, roughness:0.5, envMapIntensity:0.6}),
+  cabo:      new THREE.MeshStandardMaterial({color:0x20261f, roughness:0.85}),
+  borracha:  new THREE.MeshStandardMaterial({color:0x121009, roughness:0.95}),
+  mel:       new THREE.MeshStandardMaterial({color:0xf2a93b, roughness:0.45, envMapIntensity:0.8}),
+  zinco:     new THREE.MeshStandardMaterial({color:0x8d9499, roughness:0.38, metalness:0.88, envMapIntensity:1.1}),
+};
+
+function box(w,h,d,mat){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.castShadow=m.receiveShadow=true;return m;}
+function cyl(rt,rb,h,mat,seg=24){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);m.castShadow=m.receiveShadow=true;return m;}
+
+/* ---------- etiquetas ---------- */
+function makeLabel(text){
+  const fs=40, pad=20;
+  const m=document.createElement('canvas').getContext('2d');
+  m.font=`600 ${fs}px "Avenir Next","Segoe UI",sans-serif`;
+  const w=m.measureText(text.toUpperCase()).width;
+  const c=document.createElement('canvas');
+  c.width=w+pad*2+14; c.height=fs+pad*1.3;
+  const g=c.getContext('2d');
+  g.fillStyle='rgba(14,18,12,.92)';
+  roundRect(g,8,0,c.width-8,c.height,14); g.fill();
+  g.fillStyle='#f2a93b';
+  g.fillRect(0,c.height*0.15,4,c.height*0.7);
+  g.font=`600 ${fs*0.62}px "Avenir Next","Segoe UI",sans-serif`;
+  g.fillStyle='#f0eee0';
+  g.textBaseline='middle';
+  g.fillText(text.toUpperCase(), pad+10, c.height/2+2);
+  const tex=new THREE.CanvasTexture(c);
+  tex.encoding=THREE.sRGBEncoding;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,transparent:true}));
+  const s=0.004;
+  sp.scale.set(c.width*s, c.height*s, 1);
+  sp.visible=false;
+  return sp;
+}
+function roundRect(g,x,y,w,h,r){
+  g.beginPath();
+  g.moveTo(x+r,y);g.lineTo(x+w-r,y);g.quadraticCurveTo(x+w,y,x+w,y+r);
+  g.lineTo(x+w,y+h-r);g.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  g.lineTo(x+r,y+h);g.quadraticCurveTo(x,y+h,x,y+h-r);
+  g.lineTo(x,y+r);g.quadraticCurveTo(x,y,x+r,y);g.closePath();
+}
+
+/* ---------- estrutura de componentes ---------- */
+const root = new THREE.Group();
+scene.add(root);
+const parts = [];
+
+function addPart(code, name, desc, color, basePos, explodedOffset, labelPos){
+  const g = new THREE.Group();
+  g.position.copy(basePos);
+  root.add(g);
+  const label = makeLabel(name);
+  label.position.copy(labelPos);
+  g.add(label);
+  parts.push({code, group:g, base:basePos.clone(), off:explodedOffset.clone(), name, desc, color, label});
+  return g;
+}
+
+/* ===== 01 · Colmeia ===== */
+const hive = addPart('01','Colmeia','Estrutura tradicional em madeira de pinho tratada, com dois corpos sobrepostos, tábua de voo e telhado ventilado em chapa.',
+  '#c79a5e', new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,6.1,0));
+{
+  const base = box(5.5, 0.32, 4.7, M.madeiraEsc); base.position.y = 0.86; hive.add(base);
+
+  // corpos feitos de tábuas horizontais (mais realista)
+  function corpo(y){
+    const grp = new THREE.Group();
+    for(let i=0;i<4;i++){
+      const plank = box(5, 0.42, 4.2, M.madeira);
+      plank.position.y = i*0.44;
+      // pequena variação para parecer tábuas reais
+      plank.scale.z = 1 + (Math.random()-0.5)*0.004;
+      grp.add(plank);
+    }
+    // pegas laterais (recortes)
+    const h1 = box(0.9, 0.16, 0.1, M.madeiraEsc); h1.position.set(0, 0.9, 2.12); grp.add(h1);
+    const h2 = h1.clone(); h2.position.z = -2.12; grp.add(h2);
+    const h3 = box(0.1, 0.16, 0.9, M.madeiraEsc); h3.position.set(2.52, 0.9, 0); grp.add(h3);
+    const h4 = h3.clone(); h4.position.x = -2.52; grp.add(h4);
+    grp.position.y = y;
+    return grp;
+  }
+  hive.add(corpo(1.25));
+  hive.add(corpo(3.12));
+  const friso = box(5.18, 0.1, 4.38, M.madeiraEsc); friso.position.y = 2.95; hive.add(friso);
+
+  // telhado em chapa com nervuras
+  const roofBase = box(5.45, 0.22, 4.65, M.madeiraEsc); roofBase.position.y = 4.92; hive.add(roofBase);
+  const roof = box(5.85, 0.26, 5.0, M.zinco); roof.position.y = 5.16; hive.add(roof);
+  for(let i=0;i<6;i++){
+    const rib = box(0.07, 0.05, 5.0, M.aluEscuro);
+    rib.position.set(-2.5+i, 5.31, 0); hive.add(rib);
+  }
+  const roofLip = box(5.85, 0.18, 0.1, M.zinco); roofLip.position.set(0,5.05,2.5); hive.add(roofLip);
+  const roofLip2 = roofLip.clone(); roofLip2.position.z=-2.5; hive.add(roofLip2);
+
+  // entrada + redutor
+  const slot = box(2.5, 0.26, 0.22, M.borracha); slot.position.set(0, 1.12, 2.21); hive.add(slot);
+  const reducer = box(3.0, 0.1, 0.14, M.madeiraEsc); reducer.position.set(0, 1.3, 2.24); hive.add(reducer);
+
+  // tábua de voo
+  const board = box(3.0, 0.1, 1.0, M.madeiraEsc);
+  board.position.set(0, 0.92, 2.72); board.rotation.x = 0.14; hive.add(board);
+}
+
+/* ===== 02 · Caixa IP67 ===== */
+const techBox = addPart('02','Caixa IP67 em ABS','Caixa estanque de 200 × 150 × 80 mm que protege a eletrónica contra poeiras, chuva e humidade. Tampa com junta de vedação e bucins herméticos.',
+  '#39423a', new THREE.Vector3(0, 2.7, -2.95), new THREE.Vector3(0, 0.7, -3.4), new THREE.Vector3(0, 1.75, -0.5));
+{
+  const body = box(2.7, 1.95, 1.05, M.absClaro); techBox.add(body);
+  // nervuras laterais (aspeto industrial)
+  for(let i=0;i<5;i++){
+    const ribL = box(0.05, 1.7, 0.9, M.abs); ribL.position.set(-1.37, 0, 0); ribL.scale.y = 1-(i*0.0);
+    if(i===0){techBox.add(ribL); const ribR=ribL.clone(); ribR.position.x=1.37; techBox.add(ribR);}
+  }
+  const lid = box(2.8, 2.05, 0.16, M.abs); lid.position.z = -0.6; techBox.add(lid);
+  const seal = box(2.62, 1.88, 0.05, M.mel); seal.position.z = -0.525; techBox.add(seal);
+  [[-1.22,0.85],[1.22,0.85],[-1.22,-0.85],[1.22,-0.85]].forEach(([x,y])=>{
+    const s = cyl(0.055,0.055,0.05,M.alu,12);
+    s.rotation.x = Math.PI/2; s.position.set(x,y,-0.7); techBox.add(s);
+    const cross = box(0.07,0.012,0.02,M.aluEscuro); cross.position.set(x,y,-0.726); techBox.add(cross);
+  });
+  // bucins herméticos
+  [[-0.95],[0],[0.95]].forEach(([x])=>{
+    const g1 = cyl(0.13,0.11,0.3,M.preto,14);
+    g1.position.set(x, -1.1, 0); techBox.add(g1);
+    const nut = cyl(0.15,0.15,0.08,M.preto,6);
+    nut.position.set(x,-0.99,0); techBox.add(nut);
+  });
+  // LED de estado + placa de identificação
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.05,12,12),
+    new THREE.MeshStandardMaterial({color:0x8fc973, emissive:0x46b03a, emissiveIntensity:2.2}));
+  led.position.set(1.12, 0.72, -0.63); techBox.add(led);
+  const plate = box(0.9,0.3,0.02,M.alu); plate.position.set(-0.7,0.7,-0.69); techBox.add(plate);
+}
+
+/* ===== 03 · Eletrónica ===== */
+const electronics = addPart('03','Raspberry Pi 4 + Arduinos','Raspberry Pi 4 Model B para processamento central e visão computacional; Arduino Nano e Nano ESP32 para recolha e envio de dados dos sensores.',
+  '#1d7a33', new THREE.Vector3(0.5, 2.85, -2.95), new THREE.Vector3(2.6, 1.6, -5.0), new THREE.Vector3(0, 0.8, 0));
+{
+  const rpi = box(0.88, 0.06, 0.58, M.pcbVerde); electronics.add(rpi);
+  const cpu = box(0.2,0.05,0.2, M.aluEscuro); cpu.position.set(-0.1,0.05,0); electronics.add(cpu);
+  const ram = box(0.16,0.04,0.12, M.preto); ram.position.set(0.12,0.05,0.08); electronics.add(ram);
+  const usb1 = box(0.15,0.11,0.14,M.alu); usb1.position.set(0.4,0.08,-0.14); electronics.add(usb1);
+  const usb2 = usb1.clone(); usb2.position.z = 0.14; electronics.add(usb2);
+  const eth  = box(0.16,0.12,0.16,M.alu); eth.position.set(0.4,0.08,0.0); eth.visible=false; electronics.add(eth);
+  const gpio = box(0.5,0.06,0.06,M.preto); gpio.position.set(-0.1,0.06,-0.24); electronics.add(gpio);
+  const nano = box(0.46,0.05,0.2,M.pcbAzul); nano.position.set(-0.12,-0.3,0.14); electronics.add(nano);
+  const usbN = box(0.09,0.05,0.08,M.alu); usbN.position.set(-0.34,-0.28,0.14); electronics.add(usbN);
+  const esp = box(0.46,0.05,0.2,M.preto); esp.position.set(-0.12,-0.3,-0.16); electronics.add(esp);
+  const espChip = box(0.12,0.04,0.1,M.alu); espChip.position.set(0.0,-0.26,-0.16); electronics.add(espChip);
+}
+
+/* ===== 04 · Bateria ===== */
+const battery = addPart('04','Bateria LiFePO\u2084 12 V / 20 Ah','Acumulador de fosfato de ferro-lítio que garante vários dias de autonomia sem sol, carregado pelo painel solar.',
+  '#32508c', new THREE.Vector3(-0.6, 2.45, -2.95), new THREE.Vector3(-2.8, 1.1, -5.0), new THREE.Vector3(0, 0.8, 0));
+{
+  const bat = box(1.15, 0.9, 0.62, M.bateria); battery.add(bat);
+  const stripe = box(1.16, 0.3, 0.625, M.branco); stripe.position.y = 0.08; battery.add(stripe);
+  const t1 = cyl(0.06,0.06,0.12,M.alu,12); t1.position.set(-0.32,0.52,0); battery.add(t1);
+  const t2 = cyl(0.06,0.06,0.12,M.mel,12); t2.position.set(0.32,0.52,0); battery.add(t2);
+}
+
+/* ===== 05 · Câmara ===== */
+const cam = addPart('05','Câmara RPi Module 3','Posicionada sobre a entrada e orientada para a zona de passagem, deteta a vespa asiática em tempo real através de visão computacional.',
+  '#8fc973', new THREE.Vector3(0, 2.05, 2.36), new THREE.Vector3(0, 1.3, 3.9), new THREE.Vector3(0, 0.8, 0));
+{
+  const hood = box(0.72, 0.52, 0.58, M.absClaro); cam.add(hood);
+  const visor = box(0.8, 0.08, 0.78, M.abs); visor.position.set(0,0.3,0.08); cam.add(visor);
+  const visor2 = box(0.76, 0.06, 0.3, M.abs); visor2.position.set(0,0.26,0.42); visor2.rotation.x=-0.5; cam.add(visor2);
+  const pcb = box(0.42,0.42,0.05, M.pcbVerde); pcb.position.z=0.28; cam.add(pcb);
+  const lensBody = cyl(0.1,0.11,0.14,M.preto,18);
+  lensBody.rotation.x = Math.PI/2; lensBody.position.z=0.37; cam.add(lensBody);
+  const glass = new THREE.Mesh(new THREE.CircleGeometry(0.065,18),
+    new THREE.MeshStandardMaterial({color:0x101a3a, roughness:0.05, metalness:0.9, envMapIntensity:2}));
+  glass.position.z = 0.443; cam.add(glass);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.08,0.012,8,24), M.mel);
+  ring.position.z=0.442; cam.add(ring);
+}
+
+/* ===== 06 · Arpas anti-vespa ===== */
+const harp = addPart('06','Arpas eletrificadas anti-vespa','Grelha de fios metálicos em baixa corrente que intercepta a vespa asiática sem prejudicar a circulação das abelhas. Diferenciador do modelo Pro.',
+  '#e2e6ea', new THREE.Vector3(0, 1.78, 3.25), new THREE.Vector3(0, 0.8, 5.4), new THREE.Vector3(0, 1.4, 0));
+{
+  const frameMat = M.abs;
+  const top = box(3.3, 0.14, 0.14, frameMat); top.position.y = 1.0; harp.add(top);
+  const bot = box(3.3, 0.14, 0.14, frameMat); bot.position.y = -1.0; harp.add(bot);
+  const left = box(0.14, 2.14, 0.14, frameMat); left.position.x = -1.58; harp.add(left);
+  const right = box(0.14, 2.14, 0.14, frameMat); right.position.x = 1.58; harp.add(right);
+  // isoladores cerâmicos
+  for(let i=0;i<15;i++){
+    const iso = cyl(0.03,0.03,0.06,M.branco,8);
+    iso.position.set(-1.4+i*0.2, 0.93, 0); harp.add(iso);
+  }
+  for(let i=0;i<15;i++){
+    const w = cyl(0.011,0.011,1.86,M.fio,6);
+    w.position.x = -1.4 + i*0.2;
+    harp.add(w);
+  }
+  // pés de fixação à colmeia
+  const p1 = box(0.12,0.12,0.8,frameMat); p1.position.set(-1.58,-1.0,-0.45); harp.add(p1);
+  const p2 = p1.clone(); p2.position.x = 1.58; harp.add(p2);
+  // pequena caixa do gerador de impulsos
+  const gen = box(0.5,0.3,0.2,M.absClaro); gen.position.set(1.58,0.4,-0.18); harp.add(gen);
+  const genLed = new THREE.Mesh(new THREE.SphereGeometry(0.03,8,8),
+    new THREE.MeshStandardMaterial({color:0xe06c4f, emissive:0xc04a2e, emissiveIntensity:2}));
+  genLed.position.set(1.58,0.5,-0.06); harp.add(genLed);
+}
+
+/* ===== 07 · Painel solar ===== */
+const solar = addPart('07','Painel solar 20 W','Módulo fotovoltaico inclinado, montado sobre o telhado, que alimenta o sistema e carrega a bateria através de cablagem protegida.',
+  '#152a55', new THREE.Vector3(-0.9, 5.95, -0.5), new THREE.Vector3(-2.2, 3.0, -1.1), new THREE.Vector3(0.5, 1.0, 0.5));
+{
+  const tilt = new THREE.Group();
+  tilt.rotation.x = -0.4; tilt.rotation.y = 0.16;
+  solar.add(tilt);
+  const frame = box(3.0, 0.1, 2.2, M.alu); tilt.add(frame);
+  const inner = box(2.86, 0.04, 2.06, M.preto); inner.position.y=0.05; tilt.add(inner);
+  const panel = box(2.78, 0.05, 1.98, M.solar); panel.position.y = 0.085; tilt.add(panel);
+  const jbox = box(0.45,0.12,0.3,M.preto); jbox.position.set(0.6,-0.1,-0.5); tilt.add(jbox);
+  // suporte
+  const leg1 = box(0.09,0.85,0.09,M.aluEscuro); leg1.position.set(-1.15,-0.55,0.72); solar.add(leg1);
+  const leg2 = leg1.clone(); leg2.position.x = 1.15; solar.add(leg2);
+  const leg3 = box(0.09,0.3,0.09,M.aluEscuro); leg3.position.set(-1.15,-0.32,-0.78); solar.add(leg3);
+  const leg4 = leg3.clone(); leg4.position.x = 1.15; solar.add(leg4);
+  const cross = box(2.4,0.07,0.07,M.aluEscuro); cross.position.set(0,-0.78,0.72); solar.add(cross);
+}
+
+/* ===== 08 · Antenas + GPS ===== */
+const antennas = addPart('08','Antenas 4G · LoRaWAN · GPS','Antena 4G/LTE (SIM7600G-H), antena LoRaWAN 868 MHz (modelo Pro) e cápsula GPS u-blox NEO-M8N — dados em tempo real e localização em apiários remotos.',
+  '#b9c0c6', new THREE.Vector3(0, 3.85, -2.95), new THREE.Vector3(0, 3.2, -3.7), new THREE.Vector3(0, 1.55, 0));
+{
+  const a1base = cyl(0.1,0.12,0.1,M.preto,14); a1base.position.set(-0.9,0,0); antennas.add(a1base);
+  const a1joint = cyl(0.06,0.06,0.12,M.aluEscuro,10); a1joint.position.set(-0.9,0.1,0); antennas.add(a1joint);
+  const a1 = cyl(0.05,0.045,1.2,M.preto,12); a1.position.set(-0.9,0.72,0); antennas.add(a1);
+  const a1tip = new THREE.Mesh(new THREE.SphereGeometry(0.05,10,10),M.preto); a1tip.position.set(-0.9,1.32,0); antennas.add(a1tip);
+  const a2base = cyl(0.09,0.11,0.1,M.preto,14); a2base.position.set(0.9,0,0); antennas.add(a2base);
+  const a2 = cyl(0.042,0.04,0.9,M.absClaro,12); a2.position.set(0.9,0.55,0); antennas.add(a2);
+  const a2ring = new THREE.Mesh(new THREE.TorusGeometry(0.05,0.012,8,20),M.mel);
+  a2ring.rotation.x=Math.PI/2; a2ring.position.set(0.9,0.2,0); antennas.add(a2ring);
+  // GPS
+  const gps = new THREE.Mesh(new THREE.SphereGeometry(0.17,18,12,0,Math.PI*2,0,Math.PI/2), M.branco);
+  gps.castShadow=true; gps.position.set(0,0.04,0); antennas.add(gps);
+  const gpsBase = cyl(0.18,0.18,0.06,M.preto,18); antennas.add(gpsBase);
+}
+
+/* ===== 09 · Sensores ===== */
+const sensors = addPart('09','Sensores ambientais','Temperatura e humidade (DHT22 e DS18B20) no interior e exterior; no modelo Pro, microfone MEMS SPH0645 para som/vibração e MH-Z19B para CO\u2082.',
+  '#e9e9df', new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(3.0, 3.3, 1.2));
+{
+  const dhtShield = new THREE.Group();
+  // abrigo de radiação (discos empilhados) — aspeto profissional de estação meteo
+  for(let i=0;i<5;i++){
+    const disc = cyl(0.22-(i===0?0:0.02), 0.24, 0.05, M.branco, 18);
+    disc.position.set(2.62, 2.45+i*0.09, 1.2);
+    dhtShield.add(disc);
+  }
+  const dhtTop = cyl(0.12,0.2,0.07,M.branco,18); dhtTop.position.set(2.62,2.9,1.2); dhtShield.add(dhtTop);
+  sensors.add(dhtShield);
+  // sonda DS18B20
+  const probe = cyl(0.04,0.04,0.4,M.alu,12);
+  probe.rotation.z = Math.PI/2; probe.position.set(2.56, 3.7, -0.8); sensors.add(probe);
+  const probeCable = cyl(0.024,0.024,0.8,M.cabo,8);
+  probeCable.rotation.z = Math.PI/2; probeCable.position.set(3.05, 3.7, -0.8); sensors.add(probeCable);
+  // CO2 MH-Z19B
+  const co2 = box(0.36,0.18,0.26,new THREE.MeshStandardMaterial({color:0xc8a23a,roughness:0.35,metalness:0.7,envMapIntensity:1}));
+  co2.position.set(-2.62, 2.5, -1.3); sensors.add(co2);
+  const co2grid = box(0.2,0.06,0.27,M.preto); co2grid.position.set(-2.62,2.5,-1.3); co2grid.scale.z=1.01; sensors.add(co2grid);
+  // microfone MEMS
+  const mic = box(0.18,0.18,0.06,M.pcbVerde); mic.position.set(-2.56, 3.5, 0.6); sensors.add(mic);
+  const micHole = cyl(0.02,0.02,0.02,M.preto,8); micHole.rotation.z=Math.PI/2; micHole.position.set(-2.52,3.5,0.6); sensors.add(micHole);
+}
+
+/* ===== 10 · Balança ===== */
+const scalePart = addPart('10','Balança · células de carga + HX711','Base estrutural com quatro células de carga ligadas ao módulo HX711, que mede continuamente a variação de peso da colmeia.',
+  '#f2a93b', new THREE.Vector3(0, 0.46, 0), new THREE.Vector3(0, -1.6, 0), new THREE.Vector3(0, 0.55, 2.7));
+{
+  const plate = box(5.7, 0.16, 4.9, M.abs); plate.position.y = 0.2; scalePart.add(plate);
+  const base = box(5.9, 0.14, 5.1, M.absClaro); base.position.y = -0.26; scalePart.add(base);
+  [[-2.3,-1.9],[2.3,-1.9],[-2.3,1.9],[2.3,1.9]].forEach(([x,z])=>{
+    const cell = box(0.72,0.22,0.26,M.alu);
+    cell.position.set(x,-0.03,z); scalePart.add(cell);
+    const bolt1 = cyl(0.035,0.035,0.24,M.aluEscuro,10); bolt1.position.set(x-0.22,-0.03,z); scalePart.add(bolt1);
+    const bolt2 = bolt1.clone(); bolt2.position.x = x+0.22; scalePart.add(bolt2);
+  });
+  const hx = box(0.42,0.08,0.26,M.pcbVerde); hx.position.set(0,-0.02,2.35); scalePart.add(hx);
+  [[-2.65,-2.3],[2.65,-2.3],[-2.65,2.3],[2.65,2.3]].forEach(([x,z])=>{
+    const foot = cyl(0.15,0.2,0.26,M.borracha,14);
+    foot.position.set(x,-0.42,z); scalePart.add(foot);
+  });
+}
+
+/* ===== 11 · Cablagem ===== */
+const cables = addPart('11','Cablagem protegida','Cabos com bainha exterior, abraçadeiras e passa-cabos herméticos, a ligar o painel solar, a câmara e os sensores à caixa técnica.',
+  '#20261f', new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(-1.7, 4.6, -2.3));
+{
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-1.3, 5.55, -1.1),
+    new THREE.Vector3(-2.0, 4.7, -2.2),
+    new THREE.Vector3(-1.5, 3.5, -2.9),
+    new THREE.Vector3(-0.95, 2.1, -2.95),
+  ]);
+  const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.05, 10), M.cabo);
+  tube.castShadow = true; cables.add(tube);
+  const curve2 = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.35, 2.0, 2.25),
+    new THREE.Vector3(1.9, 2.05, 1.2),
+    new THREE.Vector3(2.3, 2.25, -1.0),
+    new THREE.Vector3(0.95, 2.35, -2.95),
+  ]);
+  const tube2 = new THREE.Mesh(new THREE.TubeGeometry(curve2, 32, 0.034, 10), M.cabo);
+  tube2.castShadow = true; cables.add(tube2);
+  [0.25, 0.55, 0.82].forEach(t=>{
+    const p = curve.getPoint(t);
+    const tie = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.016, 6, 14), M.preto);
+    tie.position.copy(p);
+    cables.add(tie);
+  });
+}
+
+/* ---------- clonar materiais por componente (para o destaque) ---------- */
+parts.forEach(p=>{
+  p.group.traverse(o=>{
+    if(o.isMesh && o.material && !o.isSprite){
+      o.material = o.material.clone();
+      o.userData.baseOpacity = 1;
+    }
+  });
+});
+
+/* ---------- abelhas animadas ---------- */
+const bees = [];
+const beeBody = new THREE.MeshStandardMaterial({color:0xe8b53a, roughness:0.6});
+const beeStripe = new THREE.MeshStandardMaterial({color:0x2a1f0c, roughness:0.6});
+const wingMat = new THREE.MeshStandardMaterial({color:0xdde8f0, transparent:true, opacity:0.45, side:THREE.DoubleSide});
+function makeBee(){
+  const b = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.07,10,8), beeBody);
+  body.scale.set(1.5,1,1); b.add(body);
+  const s1 = new THREE.Mesh(new THREE.SphereGeometry(0.071,10,8), beeStripe);
+  s1.scale.set(0.35,1.01,1.01); s1.position.x=-0.02; b.add(s1);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.045,8,8), beeStripe);
+  head.position.x = 0.12; b.add(head);
+  const wL = new THREE.Mesh(new THREE.PlaneGeometry(0.12,0.06), wingMat);
+  wL.position.set(0,0.07,0.05); wL.rotation.x = -0.6; b.add(wL);
+  const wR = wL.clone(); wR.position.z = -0.05; wR.rotation.x = 0.6; b.add(wR);
+  b.userData = {wL, wR, phase:Math.random()*7, speed:0.5+Math.random()*0.5, r:0.7+Math.random()*1.3, h:1.1+Math.random()*1.3};
+  scene.add(b);
+  bees.push(b);
+  return b;
+}
+for(let i=0;i<6;i++) makeBee();
+
+/* ---------- pólen flutuante ---------- */
+const dustGeo = new THREE.BufferGeometry();
+const dustN = 120, dustPos = new Float32Array(dustN*3);
+for(let i=0;i<dustN;i++){
+  dustPos[i*3]=(Math.random()-0.5)*22;
+  dustPos[i*3+1]=Math.random()*8+0.5;
+  dustPos[i*3+2]=(Math.random()-0.5)*22;
+}
+dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos,3));
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+  color:0xf2c878, size:0.05, transparent:true, opacity:0.5,
+  blending:THREE.AdditiveBlending, depthWrite:false
+}));
+scene.add(dust);
+
+/* ---------- legenda + interação ---------- */
+const legendEl = document.getElementById('legend');
+const detailEl = document.getElementById('detail');
+document.getElementById('count').textContent = String(parts.length).padStart(2,'0');
+
+parts.forEach((p,i)=>{
+  const li = document.createElement('li');
+  li.innerHTML = `<span class="hex" style="background:${p.color}"></span><span class="code">HB·${p.code}</span><span class="nome">${p.name}</span>`;
+  li.addEventListener('click', ()=>selectPart(i));
+  legendEl.appendChild(li);
+  p.li = li;
+});
+
+let selected = -1;
+const camGoal = {target:new THREE.Vector3(0,2.8,0), radius:15};
+const DEFAULT_TARGET = new THREE.Vector3(0,2.8,0);
+const DEFAULT_RADIUS = 15;
+
+function selectPart(i){
+  selected = (selected === i) ? -1 : i;
+  parts.forEach((p,j)=>{
+    const isSel = j===selected;
+    p.li.classList.toggle('active', isSel);
+    p.li.classList.toggle('dim', selected!==-1 && !isSel);
+    p.group.traverse(o=>{
+      if(o.isMesh && o.material && !o.isSprite){
+        const dim = selected!==-1 && !isSel;
+        o.material.transparent = dim;
+        o.material.opacity = dim ? 0.08 : 1;
+        o.material.depthWrite = !dim;
+      }
+    });
+    p.label.visible = isSel || labelsOn;
+  });
+  if(selected !== -1){
+    const p = parts[selected];
+    detailEl.querySelector('h3').textContent = `HB·${p.code} — ${p.name}`;
+    detailEl.querySelector('p').textContent = p.desc;
+    detailEl.classList.add('show');
+    // voar até ao componente
+    const wp = new THREE.Vector3();
+    p.group.getWorldPosition(wp);
+    wp.add(p.label.position.clone().multiplyScalar(0.4));
+    camGoal.target.copy(wp);
+    camGoal.radius = 7.5;
+    autoRotate = false; btnRotate.classList.remove('on');
+  } else {
+    detailEl.classList.remove('show');
+    camGoal.target.copy(DEFAULT_TARGET);
+    camGoal.radius = DEFAULT_RADIUS;
+  }
+}
+
+/* ---------- câmara orbital ---------- */
+let theta = 0.65, phi = 1.12, radius = 26;
+const target = new THREE.Vector3(0, 2.8, 0);
+let introT = 0; // animação de entrada
+
+function updateCamera(){
+  phi = Math.max(0.22, Math.min(1.48, phi));
+  radius = Math.max(4.5, Math.min(34, radius));
+  camera.position.set(
+    target.x + radius*Math.sin(phi)*Math.sin(theta),
+    target.y + radius*Math.cos(phi),
+    target.z + radius*Math.sin(phi)*Math.cos(theta)
+  );
+  camera.lookAt(target);
+}
+updateCamera();
+
+let dragging=false, px=0, py=0, moved=false;
+const hintEl = document.getElementById('hint');
+container.addEventListener('pointerdown', e=>{dragging=true;moved=false;px=e.clientX;py=e.clientY;});
+addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  const dx=e.clientX-px, dy=e.clientY-py;
+  if(Math.abs(dx)+Math.abs(dy)>3) moved=true;
+  theta -= dx*0.0055;
+  phi   -= dy*0.0055;
+  px=e.clientX; py=e.clientY;
+  if(moved){ autoRotate=false; btnRotate.classList.remove('on'); hintEl.classList.add('fade'); }
+});
+addEventListener('pointerup', ()=>dragging=false);
+container.addEventListener('wheel', e=>{
+  e.preventDefault();
+  radius *= (1 + e.deltaY*0.0011);
+  camGoal.radius = radius;
+  hintEl.classList.add('fade');
+},{passive:false});
+let pinchD=0;
+container.addEventListener('touchmove', e=>{
+  if(e.touches.length===2){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    if(pinchD){ radius -= (d-pinchD)*0.03; camGoal.radius = radius; }
+    pinchD=d;
+  }
+},{passive:true});
+container.addEventListener('touchend', ()=>pinchD=0);
+
+/* ---------- controlos ---------- */
+let exploded=false, labelsOn=false, autoRotate=true;
+const btnExplode=document.getElementById('btnExplode');
+const btnLabels=document.getElementById('btnLabels');
+const btnRotate=document.getElementById('btnRotate');
+
+btnExplode.addEventListener('click', ()=>{
+  exploded=!exploded;
+  btnExplode.classList.toggle('on', exploded);
+});
+btnLabels.addEventListener('click', ()=>{
+  labelsOn=!labelsOn;
+  btnLabels.classList.toggle('on', labelsOn);
+  parts.forEach((p,j)=>p.label.visible = labelsOn || j===selected);
+});
+btnRotate.addEventListener('click', ()=>{
+  autoRotate=!autoRotate;
+  btnRotate.classList.toggle('on', autoRotate);
+});
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if(reduceMotion){ autoRotate=false; btnRotate.classList.remove('on'); introT = 1; radius = DEFAULT_RADIUS; }
+
+/* ---------- ciclo de animação ---------- */
+const clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  const dt = Math.min(clock.getDelta()+0.016, 0.05);
+
+  // intro: aproximação suave
+  if(introT < 1){
+    introT = Math.min(1, introT + 0.008);
+    const e = 1 - Math.pow(1-introT, 3);
+    radius = 26 + (DEFAULT_RADIUS-26)*e;
+    camGoal.radius = radius;
+  }
+
+  if(autoRotate) theta += 0.0028;
+
+  // câmara segue o objetivo suavemente
+  target.lerp(camGoal.target, 0.06);
+  radius += (camGoal.radius - radius)*0.06;
+  updateCamera();
+
+  // explosão
+  parts.forEach(p=>{
+    const goal = exploded ? p.base.clone().add(p.off) : p.base;
+    p.group.position.lerp(goal, 0.075);
+  });
+
+  // abelhas
+  bees.forEach((b,i)=>{
+    const u = b.userData;
+    const a = t*u.speed + u.phase;
+    b.position.set(
+      Math.sin(a)*u.r + Math.sin(a*2.3)*0.3,
+      u.h + Math.sin(a*1.7)*0.35,
+      2.6 + Math.cos(a)*u.r*0.7
+    );
+    b.rotation.y = -a + Math.PI/2;
+    const flap = Math.sin(t*40+i)*0.7;
+    u.wL.rotation.x = -0.6 + flap;
+    u.wR.rotation.x =  0.6 - flap;
+  });
+
+  // pólen
+  dust.rotation.y = t*0.01;
+  dust.position.y = Math.sin(t*0.25)*0.15;
+
+  renderer.render(scene, camera);
+}
+animate();
+
+/* loader */
+addEventListener('load', ()=>{
+  setTimeout(()=>document.getElementById('loader').classList.add('done'), 500);
+});
+setTimeout(()=>document.getElementById('loader').classList.add('done'), 2200);
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
